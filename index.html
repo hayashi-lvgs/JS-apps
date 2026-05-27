@@ -106,7 +106,7 @@
 </head>
 <body>
 <div class="app">
- 
+
   <section class="screen active" id="screen-quest">
     <div class="screen-title">お題</div>
     <div class="card">
@@ -123,7 +123,7 @@
       <div id="hint"></div><div id="result"></div><button id="nextBtn"></button>
     </div>
   </section>
- 
+
   <section class="screen" id="screen-learn">
     <!-- 一覧 -->
     <div id="learn-list">
@@ -167,7 +167,7 @@
       </div>
     </div>
   </section>
- 
+
   <section class="screen" id="screen-record">
     <div class="screen-title">記録</div>
     <div class="card">
@@ -181,7 +181,7 @@
       </div>
     </div>
   </section>
- 
+
   <section class="screen" id="screen-cards">
     <div class="screen-title">単語フラッシュカード</div>
     <div class="fc-cats" id="fc-cats"></div>
@@ -206,7 +206,7 @@
       </div>
     </div>
   </section>
- 
+
   <section class="screen" id="screen-my">
     <div class="screen-title">マイページ</div>
     <div class="card">
@@ -217,7 +217,7 @@
     </div>
     <p class="soon">記録はこのブラウザに保存されています</p>
   </section>
- 
+
   <nav class="tabbar">
     <button class="tab active" data-screen="quest">
       <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.7-1 1.4-1 2.5H9c0-1.1-.3-1.8-1-2.5A6 6 0 0 1 12 3z"/></svg>
@@ -241,10 +241,10 @@
     </button>
   </nav>
 </div>
- 
+
 <script>
   const $ = (id) => document.getElementById(id);
- 
+
   /* ===== お題データ ===== */
   const problems = [
     { level:"初級", category:"配列・繰り返し", question:"配列 [1,2,3,4,5,6] から偶数だけを取り出して、result という変数に入れてください。",
@@ -263,7 +263,7 @@
       starterCode:"const nums = [4, 8, 15, 16, 23, 42];\nconst result = Math.max(...nums);\n", expected:42,
       hint:"Math.max(...nums) のように ... を付けると、配列の中身を比較できます。" }
   ];
- 
+
   /* ===== 学習記事データ（説明は自分の言葉で。ここに足せば項目を増やせる） ===== */
   const lessons = {
     html: [
@@ -492,7 +492,7 @@ btn.addEventListener('click', () =&gt; {
 <p class="note">PMとして超重要：現場の会話の多くがこのAPI周りです。「このデータはどのAPIから来る？」「APIが遅い/落ちたらどう見せる？」を話せると、エンジニアとの連携がぐっと深まります。</p>` }
     ]
   };
- 
+
   /* ===== 記録の読み書き ===== */
   function loadData() { try { const raw = localStorage.getItem("dailyAppData"); if (raw) return JSON.parse(raw); } catch (e) {} return { days: [], solved: 0 }; }
   function saveData(d) { try { localStorage.setItem("dailyAppData", JSON.stringify(d)); } catch (e) {} }
@@ -523,7 +523,7 @@ btn.addEventListener('click', () =&gt; {
       cal.appendChild(div);
     }
   }
- 
+
   /* ===== お題 ===== */
   let currentIndex = 0;
   function showProblem(index) {
@@ -545,7 +545,7 @@ btn.addEventListener('click', () =&gt; {
     } else { result.classList.add("ng"); result.textContent = "惜しい、もう一度。あなたの出力: " + JSON.stringify(v); }
   });
   $("nextBtn").addEventListener("click", () => { currentIndex = (currentIndex+1) % problems.length; showProblem(currentIndex); $("screen-quest").scrollIntoView({behavior:"smooth", block:"start"}); });
- 
+
   /* ===== 学習タブ：一覧と記事 ===== */
   function buildLearnList(containerId, items) {
     const c = $(containerId); c.innerHTML = "";
@@ -571,7 +571,7 @@ btn.addEventListener('click', () =&gt; {
   buildLearnList("css-list", lessons.css);
   buildLearnList("js-list", lessons.js);
   buildLearnList("adv-list", lessons.adv);
- 
+
   /* ===== 単語フラッシュカード ===== */
   const flashcards = {
     HTML: [
@@ -681,10 +681,10 @@ btn.addEventListener('click', () =&gt; {
       { term:"イベントの e.target は何を指す？", mean:"実際に操作（クリック等）された要素そのもの。", use:"どのボタンが押されたかを知りたいときに使います。たくさんのボタンに1つのリスナーをまとめて付け、押された要素を e.target で見分ける、という効率的な書き方ができます。", code:"list.addEventListener('click', (e) => {\n  // 押された要素を取得\n  console.log(e.target.textContent);\n  if (e.target.classList.contains('delete')) {\n    e.target.closest('li').remove();\n  }\n});" }
     ]
   };
- 
+
   let fcCategory = "HTML";
   let fcIndex = 0;
- 
+
   function buildFcCats() {
     const c = $("fc-cats"); c.innerHTML = "";
     Object.keys(flashcards).forEach((cat) => {
@@ -721,7 +721,7 @@ btn.addEventListener('click', () =&gt; {
   });
   buildFcCats();
   showCard();
- 
+
   /* ===== タブ切り替え ===== */
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -732,13 +732,12 @@ btn.addEventListener('click', () =&gt; {
       if (tab.dataset.screen === "record" || tab.dataset.screen === "my") refreshStats();
     });
   });
- 
+
   $("resetBtn").addEventListener("click", () => {
     if (confirm("記録をすべてリセットしますか？")) { localStorage.removeItem("dailyAppData"); data = markToday(); refreshStats(); alert("リセットしました"); }
   });
- 
+
   refreshStats();
 </script>
 </body>
 </html>
- 
