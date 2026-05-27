@@ -1,0 +1,19 @@
+{
+  "name": "毎日のお題アプリ",
+  "short_name": "学習アプリ",
+  "description": "毎日学べる学習アプリ（記録・学習・フラッシュカード）",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f7f5",
+  "theme_color": "#185fa5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
