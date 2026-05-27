@@ -80,6 +80,25 @@
   .my-row .v { color: var(--sub); }
   .reset { color: var(--err); cursor: pointer; }
   .soon { padding: 30px 18px; text-align: center; color: var(--sub); font-size: 14px; }
+  .fc-cats { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 2px 14px; }
+  .fc-cat { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--sub); font-size: 13px; cursor: pointer; }
+  .fc-cat.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-bg); }
+  .fc-wrap { display: flex; flex-direction: column; align-items: center; }
+  .fc-counter { font-size: 13px; color: var(--sub); margin-bottom: 10px; }
+  .flashcard { width: 100%; perspective: 1200px; cursor: pointer; margin-bottom: 14px; transition: height 0.35s; }
+  .fc-inner { position: relative; width: 100%; height: 100%; min-height: 200px; transition: transform 0.5s; transform-style: preserve-3d; }
+  .fc-inner.flipped { transform: rotateY(180deg); }
+  .fc-face { position: absolute; inset: 0; backface-visibility: hidden; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; justify-content: center; }
+  .fc-front { align-items: center; text-align: center; }
+  .fc-term { font-size: 17px; font-weight: 600; line-height: 1.5; text-align: center; word-break: break-word; }
+  .fc-tap { margin-top: 16px; font-size: 12px; color: var(--sub); }
+  .fc-back { transform: rotateY(180deg); overflow-y: auto; }
+  .fc-mean { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--accent); }
+  .fc-uselabel, .fc-codelabel { font-size: 11px; color: var(--sub); margin-bottom: 4px; letter-spacing: 0.04em; }
+  .fc-use { font-size: 14px; color: var(--text); margin-bottom: 14px; line-height: 1.7; }
+  .fc-code { background: var(--code-bg); color: var(--code-fg); padding: 12px; border-radius: 8px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; line-height: 1.6; overflow-x: auto; margin: 0; white-space: pre-wrap; }
+  .fc-nav { display: flex; gap: 10px; width: 100%; }
+  .fc-nav button { flex: 1; }
   .tabbar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 440px; margin: 0 auto; display: flex; background: var(--card); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom, 0); }
   .tab { flex: 1; border: none; background: none; padding: 9px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--sub); cursor: pointer; font-family: inherit; }
   .tab svg { width: 23px; height: 23px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -91,28 +110,19 @@
 <div class="app">
 
   <section class="screen active" id="screen-quest">
+    <div class="screen-title">お題</div>
     <div class="card">
-      <div class="header">
-        <h2>今日のお題</h2>
-        <span class="streak" id="streak">1日目</span>
+      <div class="soon" style="padding:48px 18px;">
+        <div style="font-size:32px; margin-bottom:8px;">🚧</div>
+        <p style="margin:0 0 4px; font-weight:600; color:var(--text);">ただいま工事中</p>
+        <p style="margin:0;">お題機能はリニューアル準備中です。<br>その間は「単語」タブで用語を覚えましょう。</p>
       </div>
-      <div class="body">
-        <div class="progress" id="progress"></div>
-        <div class="tags">
-          <span class="tag" id="level">初級</span>
-          <span class="cat" id="category">配列・繰り返し</span>
-        </div>
-        <p class="question" id="question"></p>
-        <div class="label">あなたのコード（JavaScript）</div>
-        <textarea id="code" spellcheck="false"></textarea>
-        <div class="buttons">
-          <button class="primary" id="runBtn">実行する</button>
-          <button id="hintBtn">ヒントを見る</button>
-        </div>
-        <div class="hint" id="hint"></div>
-        <div class="result" id="result"></div>
-        <button class="next" id="nextBtn">次のお題へ</button>
-      </div>
+    </div>
+    <div style="display:none;">
+      <span id="streak"></span><span id="progress"></span><span id="level"></span>
+      <span id="category"></span><span id="question"></span><textarea id="code"></textarea>
+      <button id="runBtn"></button><button id="hintBtn"></button>
+      <div id="hint"></div><div id="result"></div><button id="nextBtn"></button>
     </div>
   </section>
 
@@ -175,8 +185,30 @@
   </section>
 
   <section class="screen" id="screen-cards">
-    <div class="screen-title">単語</div>
-    <div class="card"><p class="soon">フラッシュカード機能は今後追加予定です</p></div>
+    <div class="screen-title">単語フラッシュカード</div>
+    <div class="fc-cats" id="fc-cats"></div>
+    <div class="fc-wrap">
+      <div class="fc-counter" id="fc-counter"></div>
+      <div class="flashcard" id="flashcard">
+        <div class="fc-inner" id="fc-inner">
+          <div class="fc-face fc-front">
+            <div class="fc-term" id="fc-term"></div>
+            <div class="fc-tap">タップで答えを見る</div>
+          </div>
+          <div class="fc-face fc-back">
+            <div class="fc-mean" id="fc-mean"></div>
+            <div class="fc-uselabel">どう使える？</div>
+            <div class="fc-use" id="fc-use"></div>
+            <div class="fc-codelabel">コード例</div>
+            <pre class="fc-code" id="fc-code"></pre>
+          </div>
+        </div>
+      </div>
+      <div class="fc-nav">
+        <button id="fc-prev">‹ 前へ</button>
+        <button id="fc-next">次へ ›</button>
+      </div>
+    </div>
   </section>
 
   <section class="screen" id="screen-my">
@@ -544,6 +576,166 @@ btn.addEventListener('click', () =&gt; {
   buildLearnList("js-list", lessons.js);
   buildLearnList("adv-list", lessons.adv);
 
+  /* ===== 単語フラッシュカード ===== */
+  const flashcards = {
+    HTML: [
+      { term:"DOCTYPE宣言", mean:"HTML文書だと宣言", use:"ファイルの先頭に書く約束。これで最新HTMLとして解釈されます。", code:"&lt;!DOCTYPE html&gt;" },
+      { term:"&lt;html&gt; タグ", mean:"文書全体を囲む", use:"すべての要素の一番外側。lang属性で言語を指定します。", code:"&lt;html lang=\"ja\"&gt;\n  ...\n&lt;/html&gt;" },
+      { term:"&lt;head&gt; タグ", mean:"ページの設定を書く場所", use:"画面には表示されない情報（文字コード・タイトル・CSS読込）を入れます。", code:"&lt;head&gt;\n  &lt;title&gt;ページ名&lt;/title&gt;\n&lt;/head&gt;" },
+      { term:"&lt;body&gt; タグ", mean:"画面に表示される中身", use:"実際にブラウザに見える内容は、すべてこの中に書きます。", code:"&lt;body&gt;\n  &lt;h1&gt;こんにちは&lt;/h1&gt;\n&lt;/body&gt;" },
+      { term:"&lt;meta charset&gt;", mean:"文字コードの指定", use:"UTF-8を指定。これが無いと日本語が文字化けすることがあります。", code:"&lt;meta charset=\"UTF-8\"&gt;" },
+      { term:"&lt;title&gt; タグ", mean:"ページのタイトル", use:"ブラウザのタブに表示される名前。head内に書きます。", code:"&lt;title&gt;毎日のお題アプリ&lt;/title&gt;" },
+      { term:"&lt;h1&gt;〜&lt;h6&gt;", mean:"見出し", use:"数字が小さいほど大きい見出し。h1は1ページに1つが基本です。", code:"&lt;h1&gt;大見出し&lt;/h1&gt;\n&lt;h2&gt;中見出し&lt;/h2&gt;" },
+      { term:"&lt;p&gt; タグ", mean:"段落（文章のまとまり）", use:"本文の一段落を表します。改行ではなく意味のまとまりで区切ります。", code:"&lt;p&gt;これは段落です。&lt;/p&gt;" },
+      { term:"&lt;a&gt; タグ", mean:"リンクを作る", use:"href属性でリンク先を指定。押すとそのページへ移動します。", code:"&lt;a href=\"https://example.com\"&gt;\n  サイトへ\n&lt;/a&gt;" },
+      { term:"&lt;img&gt; タグ", mean:"画像を表示", use:"src属性で画像の場所、alt属性で代替テキストを指定します。", code:"&lt;img src=\"cat.jpg\" alt=\"猫\"&gt;" },
+      { term:"&lt;ul&gt; / &lt;li&gt;", mean:"箇条書きリスト", use:"ulが箇条書き全体、liが各項目。順序のないリストに使います。", code:"&lt;ul&gt;\n  &lt;li&gt;りんご&lt;/li&gt;\n  &lt;li&gt;みかん&lt;/li&gt;\n&lt;/ul&gt;" },
+      { term:"&lt;ol&gt; / &lt;li&gt;", mean:"番号付きリスト", use:"olは自動で1.2.3...と番号が付くリスト。手順などに使います。", code:"&lt;ol&gt;\n  &lt;li&gt;材料を切る&lt;/li&gt;\n  &lt;li&gt;炒める&lt;/li&gt;\n&lt;/ol&gt;" },
+      { term:"&lt;div&gt; タグ", mean:"ひとまとまりの箱", use:"意味は持たないが、要素をグループ化してCSSで装飾する土台になります。", code:"&lt;div class=\"card\"&gt;\n  ...\n&lt;/div&gt;" },
+      { term:"&lt;span&gt; タグ", mean:"文中の一部を囲む箱", use:"文章の一部だけ色を変えるなど、インライン（横並び）の装飾に使います。", code:"&lt;p&gt;これは&lt;span class=\"red\"&gt;重要&lt;/span&gt;です&lt;/p&gt;" },
+      { term:"&lt;button&gt; タグ", mean:"ボタンを作る", use:"押せるボタン。JavaScriptと組み合わせて操作に反応させます。", code:"&lt;button&gt;送信&lt;/button&gt;" },
+      { term:"&lt;input&gt; タグ", mean:"入力欄を作る", use:"type属性で種類が変わる（text・email・checkboxなど）。", code:"&lt;input type=\"text\" placeholder=\"名前\"&gt;" },
+      { term:"&lt;form&gt; タグ", mean:"入力フォーム全体", use:"複数の入力欄をまとめ、送信を扱う枠。中にinputやbuttonを置きます。", code:"&lt;form&gt;\n  &lt;input type=\"text\"&gt;\n  &lt;button&gt;送信&lt;/button&gt;\n&lt;/form&gt;" },
+      { term:"&lt;label&gt; タグ", mean:"入力欄の見出し", use:"どの入力欄かを示すラベル。クリックで対応する入力欄が選択されます。", code:"&lt;label&gt;名前&lt;input type=\"text\"&gt;&lt;/label&gt;" },
+      { term:"&lt;textarea&gt;", mean:"複数行の入力欄", use:"長い文章を入力させたいときの入力欄。お題のコード欄もこれです。", code:"&lt;textarea&gt;ここに入力&lt;/textarea&gt;" },
+      { term:"&lt;select&gt; / &lt;option&gt;", mean:"プルダウン選択", use:"selectが枠、optionが各選択肢。一覧から1つ選ばせます。", code:"&lt;select&gt;\n  &lt;option&gt;東京&lt;/option&gt;\n  &lt;option&gt;大阪&lt;/option&gt;\n&lt;/select&gt;" },
+      { term:"id 属性", mean:"その要素だけの名札", use:"ページ内で1回だけ使える目印。CSSやJSから「この要素」と指せます。", code:"&lt;div id=\"header\"&gt;...&lt;/div&gt;\n\n#header { color: red; }" },
+      { term:"class 属性", mean:"グループの名札", use:"何度でも使える目印。同じ見た目をまとめて当てる要素に付けます。", code:"&lt;p class=\"note\"&gt;注意&lt;/p&gt;\n\n.note { color: gray; }" },
+      { term:"href 属性", mean:"リンク先の指定", use:"aタグに付けて、どこへ移動するかを指定します。", code:"&lt;a href=\"/about\"&gt;会社概要&lt;/a&gt;" },
+      { term:"src 属性", mean:"読み込み元の指定", use:"imgやscriptに付けて、画像やファイルの場所を指定します。", code:"&lt;img src=\"logo.png\"&gt;" },
+      { term:"alt 属性", mean:"画像の代替テキスト", use:"画像が表示できない時や読み上げ時に使われる説明。アクセシビリティに重要。", code:"&lt;img src=\"cat.jpg\" alt=\"眠る猫\"&gt;" },
+      { term:"&lt;br&gt; タグ", mean:"改行", use:"文章の途中で改行したいときに使う。終了タグが不要なタグです。", code:"1行目&lt;br&gt;2行目" },
+      { term:"&lt;table&gt;", mean:"表を作る", use:"tr（行）・th（見出しセル）・td（データセル）を組み合わせて表にします。", code:"&lt;table&gt;\n  &lt;tr&gt;&lt;th&gt;名前&lt;/th&gt;&lt;/tr&gt;\n  &lt;tr&gt;&lt;td&gt;山田&lt;/td&gt;&lt;/tr&gt;\n&lt;/table&gt;" },
+      { term:"&lt;nav&gt; / &lt;header&gt;", mean:"意味を持つ枠", use:"divと似るが「ナビ」「ヘッダー」と意味を伝える。読みやすい構造になります。", code:"&lt;header&gt;\n  &lt;nav&gt;メニュー&lt;/nav&gt;\n&lt;/header&gt;" },
+      { term:"コメントアウト", mean:"メモを残す（表示されない）", use:"画面に出ないメモ。後で見返す自分やチームへの説明に使います。", code:"&lt;!-- ここはヘッダー --&gt;" },
+      { term:"&lt;link&gt; タグ", mean:"外部CSSを読み込む", use:"別ファイルのCSSをHTMLに取り込みます。head内に書きます。", code:"&lt;link rel=\"stylesheet\" href=\"style.css\"&gt;" }
+    ],
+    CSS: [
+      { term:"color", mean:"文字の色を変える", use:"色名（red）かカラーコード（#f89174）で指定します。", code:"p {\n  color: orange;\n}" },
+      { term:"background-color", mean:"背景色を変える", use:"要素の背景の色。ページ全体ならbodyに指定します。", code:"body {\n  background-color: #fffbf4;\n}" },
+      { term:"font-size", mean:"文字の大きさ", use:"px や em で指定。本文は16px前後が読みやすいです。", code:"p {\n  font-size: 18px;\n}" },
+      { term:"font-weight", mean:"文字の太さ", use:"boldで太字、normalで標準。数値（400/700）でも指定できます。", code:"h1 {\n  font-weight: bold;\n}" },
+      { term:"font-family", mean:"フォントの種類", use:"使う書体を指定。複数書いて、無い場合の代わりも指定できます。", code:"body {\n  font-family: \"Helvetica\", sans-serif;\n}" },
+      { term:"text-align", mean:"文字の寄せ方", use:"left（左）・center（中央）・right（右）で配置します。", code:"h1 {\n  text-align: center;\n}" },
+      { term:"line-height", mean:"行間の高さ", use:"行と行のすきま。1.6前後にすると読みやすくなります。", code:"p {\n  line-height: 1.6;\n}" },
+      { term:"text-decoration", mean:"文字の線（下線など）", use:"リンクの下線を消したり、打ち消し線を引いたりします。", code:"a {\n  text-decoration: none;\n}" },
+      { term:"margin", mean:"外側の余白", use:"要素の外側、隣の要素とのすきまを作ります。", code:".box {\n  margin: 24px;\n}" },
+      { term:"padding", mean:"内側の余白", use:"要素の内側、枠と中身のすきまを作ります。", code:".box {\n  padding: 16px;\n}" },
+      { term:"border", mean:"線を引く", use:"「種類 太さ 色」を空けて並べて指定します。", code:".box {\n  border: solid 2px gray;\n}" },
+      { term:"border-radius", mean:"角を丸くする", use:"数値が大きいほど丸い角に。カードやボタンでよく使います。", code:".box {\n  border-radius: 12px;\n}" },
+      { term:"width / height", mean:"幅と高さ", use:"要素の大きさ。px（固定）や%（割合）で指定します。", code:".box {\n  width: 300px;\n  height: 200px;\n}" },
+      { term:"max-width", mean:"最大の幅", use:"これ以上は広がらない上限。中央寄せレイアウトの定番です。", code:".container {\n  max-width: 800px;\n}" },
+      { term:"display: block", mean:"縦に積む表示", use:"横幅いっぱいに広がり、要素が縦に並びます。divの初期値。", code:".box {\n  display: block;\n}" },
+      { term:"display: inline", mean:"横に並ぶ表示", use:"文章の中で横に並ぶ表示。spanやaの初期値です。", code:"span {\n  display: inline;\n}" },
+      { term:"display: none", mean:"非表示にする", use:"要素を画面から消します。JSで表示/非表示を切り替える時に使います。", code:".hidden {\n  display: none;\n}" },
+      { term:"display: flex", mean:"柔軟な横並び", use:"子要素を柔軟に並べる。「横並びにしたい」の定番です。", code:".menu {\n  display: flex;\n  gap: 12px;\n}" },
+      { term:"justify-content", mean:"flexの横方向の配置", use:"flex内で子要素を左寄せ・中央・両端などに配置します。", code:".menu {\n  display: flex;\n  justify-content: center;\n}" },
+      { term:"align-items", mean:"flexの縦方向の配置", use:"flex内で子要素を上・中央・下に揃えます。", code:".menu {\n  display: flex;\n  align-items: center;\n}" },
+      { term:"gap", mean:"要素間のすきま", use:"flexやgridで、子要素どうしのすきまをまとめて指定します。", code:".menu {\n  display: flex;\n  gap: 16px;\n}" },
+      { term:"position: relative", mean:"基準になる位置指定", use:"それ自体は動かさず、中の絶対配置の基準にするのによく使います。", code:".parent {\n  position: relative;\n}" },
+      { term:"position: absolute", mean:"自由な位置に置く", use:"基準要素を起点に、top/leftなどで好きな位置へ配置します。", code:".badge {\n  position: absolute;\n  top: 8px;\n  right: 8px;\n}" },
+      { term:"position: fixed", mean:"画面に固定", use:"スクロールしても動かない。ヘッダーやボトムバーに使います。", code:".bar {\n  position: fixed;\n  bottom: 0;\n}" },
+      { term:"z-index", mean:"重なりの順序", use:"数値が大きいほど手前。要素の前後関係を決めます。", code:".modal {\n  z-index: 100;\n}" },
+      { term:"background", mean:"背景の一括指定", use:"色・画像などをまとめて指定できる便利なプロパティです。", code:".hero {\n  background: #185fa5;\n}" },
+      { term:"opacity", mean:"透明度", use:"0（透明）〜1（不透明）。薄く見せたい時に使います。", code:".faded {\n  opacity: 0.5;\n}" },
+      { term:"box-shadow", mean:"影をつける", use:"要素に影を落として立体感を出します。", code:".card {\n  box-shadow: 0 2px 8px rgba(0,0,0,0.1);\n}" },
+      { term:"transition", mean:"変化をなめらかに", use:"色や大きさの変化をアニメーションさせ、ぬるっと変わります。", code:".btn {\n  transition: all 0.25s;\n}" },
+      { term:":hover", mean:"マウスを乗せた時", use:"カーソルが乗った時だけの見た目を指定できます。", code:".btn:hover {\n  background: #eee;\n}" },
+      { term:"transform", mean:"変形させる", use:"拡大・回転・移動など。scaleで少し大きくする演出が定番です。", code:".btn:active {\n  transform: scale(0.98);\n}" },
+      { term:"メディアクエリ", mean:"画面幅で出し分け", use:"スマホ・PCで見た目を変えるレスポンシブの中核です。", code:"@media (max-width: 600px) {\n  .menu { display: block; }\n}" },
+      { term:"単位 px / % / rem", mean:"大きさの単位", use:"px=固定、%=親に対する割合、rem=基準文字サイズ基準。", code:"width: 50%;\nfont-size: 1.5rem;\npadding: 16px;" },
+      { term:"セレクタ（基本）", mean:"どこに当てるか", use:"タグ名・#id・.classで対象を指定します。", code:"p { }\n#header { }\n.note { }" },
+      { term:"子孫セレクタ", mean:"絞り込んで指定", use:"スペースで区切ると「◯◯の中の◯◯」だけに当てられます。", code:".main p {\n  color: gray;\n}" },
+      { term:"background-image", mean:"背景に画像", use:"url()で画像を指定。背景に写真や模様を敷けます。", code:".hero {\n  background-image: url(bg.jpg);\n}" },
+      { term:"cursor", mean:"カーソルの形", use:"pointerにすると指の形になり「押せる」と伝わります。", code:".btn {\n  cursor: pointer;\n}" },
+      { term:"overflow", mean:"はみ出しの扱い", use:"中身があふれた時に隠す・スクロールさせるなどを決めます。", code:".box {\n  overflow: auto;\n}" },
+      { term:"flex-direction", mean:"flexの並ぶ向き", use:"rowで横、columnで縦に子要素を並べます。", code:".menu {\n  display: flex;\n  flex-direction: column;\n}" },
+      { term:"CSS変数", mean:"色などを使い回す", use:"--名前 で値を定義し、var()で呼び出す。一括変更がラクに。", code:":root {\n  --main: #185fa5;\n}\n.btn { color: var(--main); }" }
+    ],
+    JavaScript: [
+      { term:"const と let の違いは？", mean:"const は再代入できない変数、let は再代入できる変数。", use:"値を後から変えるかどうかで使い分けます。実務では「まず const、変える必要が出たら let」が鉄則。意図せぬ書き換えを防げて、バグが減ります。たとえば合計を足し込む変数は let、設定値や名前など固定のものは const にします。", code:"const TAX = 1.1;      // 変えない\nlet total = 0;        // 足し込む\nconst items = [100, 200, 300];\nitems.forEach(p => {\n  total += p;         // letだから再代入OK\n});\nconst withTax = total * TAX;\nconsole.log(withTax); // 660" },
+      { term:"テンプレートリテラルとは？囲む記号は？", mean:"${変数} で文字に変数を埋め込める書き方。全体をバッククォート ` で囲む。", use:"文字と変数をつなぐとき、+ で連結するより圧倒的に読みやすくなります。画面に出すメッセージや、HTMLを組み立てるときに多用します。改行もそのまま書けるのが便利です。", code:"const name = '山田';\nconst count = 3;\n// + で繋ぐと読みにくい\nconst msg1 = name + 'さんは' + count + '回';\n// テンプレートリテラルなら一目瞭然\nconst msg2 = `${name}さんは${count}回`;\nconsole.log(msg2); // 山田さんは3回" },
+      { term:"document.getElementById('out') は何をする？", mean:"HTMLから id=\"out\" の要素を1つ探し出す。", use:"JavaScriptでHTMLをいじる第一歩。「書き換えたい場所を特定する」ために使います。取得した要素を変数に入れておき、後で中身や見た目を変えます。教室から出席番号で1人を呼び出すイメージです。", code:"// HTML: <p id=\"out\"></p>\nconst out = document.getElementById('out');\n// 取得できたら中身を書き換えられる\nout.textContent = '結果はここに出ます';\nout.style.color = 'blue';" },
+      { term:"querySelector() と getElementById() の違いは？", mean:"querySelector はCSSと同じ書き方(#id や .class)で探せる。getElementById はidだけ。", use:"今はほとんど querySelector を使えばOKです。# を付ければid、. を付ければclassを探せて、1つの書き方で済むからです。複数取りたいときは querySelectorAll を使います。", code:"// id で取る\nconst title = document.querySelector('#title');\n// class で取る\nconst card = document.querySelector('.card');\n// 全部取る\nconst cards = document.querySelectorAll('.card');\ncards.forEach(c => console.log(c.textContent));" },
+      { term:"要素.textContent = '文字' は何をする？", mean:"その要素に表示されている文字を、新しい文字に書き換える。", use:"計算結果やメッセージを画面に出す定番。取得した要素に対して textContent に文字を代入するだけで、画面の表示が変わります。入力された名前を受け取って「こんにちは○○さん」と出す、などに使います。", code:"const out = document.querySelector('#out');\nconst name = '田中';\nout.textContent = `こんにちは、${name}さん`;\n// 画面の #out が書き換わる" },
+      { term:"addEventListener('click', ...) は何をする？", mean:"要素がクリックされたとき、指定した処理を実行するよう登録する。", use:"ボタンを押したら何かが起きる、というアプリの動きの核。第1引数にイベント名(click/inputなど)、第2引数に「起きたときの処理」を渡します。1つの要素に複数登録もできます。", code:"const btn = document.querySelector('#btn');\nconst out = document.querySelector('#out');\nlet count = 0;\nbtn.addEventListener('click', () => {\n  count++;\n  out.textContent = `${count}回押した`;\n});" },
+      { term:"classList.toggle('is-open') は何をする？", mean:"そのクラスが付いていれば外し、無ければ付ける（交互に切替）。", use:"メニューやモーダルの開け閉めの定番。見た目の変化はCSSに任せ、JSは「クラスを付け外しするだけ」にするのが現場のやり方です。役割が分かれてコードが整理されます。", code:"const menu = document.querySelector('#menu');\nconst btn = document.querySelector('#btn');\nbtn.addEventListener('click', () => {\n  menu.classList.toggle('is-open');\n});\n/* CSS側\n   .menu { display: none; }\n   .menu.is-open { display: block; }\n*/" },
+      { term:"map() は何をする配列メソッド？", mean:"配列の各要素を変換して、新しい配列を作る。", use:"「データの一覧を、表示用の形に変える」ときの主役。特にデータの配列からHTMLのリストを組み立てる場面で必ず登場します。元の配列は変わらず、新しい配列が返るのがポイント。", code:"const names = ['山田', '田中', '佐藤'];\n// 各名前を <li> に変換\nconst items = names.map(n => `<li>${n}</li>`);\n// 配列を1つの文字列に繋いで画面へ\ndocument.querySelector('#list').innerHTML =\n  items.join('');" },
+      { term:"filter() は何をする配列メソッド？", mean:"条件に合う要素だけを残した、新しい配列を作る。", use:"「一覧から条件に合うものだけ抜き出す」検索・絞り込みの定番。完了したタスクだけ、価格が1000円以下の商品だけ、といった処理がこれ1行で書けます。", code:"const tasks = [\n  { name: '掃除', done: true },\n  { name: '買物', done: false },\n  { name: '洗濯', done: true },\n];\n// 未完了だけ絞り込む\nconst todo = tasks.filter(t => !t.done);\nconsole.log(todo); // [{name:'買物',done:false}]" },
+      { term:"find() は何をする配列メソッド？", mean:"条件に最初に合った要素を1つだけ返す。", use:"「IDが一致するデータを1件取り出す」ときの定番。filterが全部集めるのに対し、findは最初の1つだけ。見つからなければ undefined が返ります。", code:"const users = [\n  { id: 1, name: '山田' },\n  { id: 2, name: '田中' },\n];\n// id が 2 のユーザーを探す\nconst user = users.find(u => u.id === 2);\nconsole.log(user.name); // 田中" },
+      { term:"forEach() は何をする配列メソッド？", mean:"配列の各要素に対して、順番に処理を実行する。", use:"「一覧を1つずつ処理する」ときに使います。mapと違い新しい配列は作らず、各要素に対して何かする（画面に追加する、合計する等）のが目的です。", code:"const prices = [100, 200, 300];\nlet total = 0;\nprices.forEach(p => {\n  total += p;\n});\nconsole.log(total); // 600" },
+      { term:"if / else は何をする？", mean:"条件が true なら if の中、false なら else の中を実行する。", use:"「状況によって処理を変える」場合分けの基本。入力チェック（空なら警告）、状態の出し分け（ログイン済みかどうか）など、あらゆる分岐で使います。", code:"const age = 20;\nif (age >= 18) {\n  console.log('大人です');\n} else {\n  console.log('未成年です');\n}\n// 入力チェックの例\nif (name === '') {\n  alert('名前を入力してください');\n}" },
+      { term:"for 文は何をする？", mean:"決まった回数だけ、処理を繰り返す。", use:"「N回同じことをする」「0からN個の要素を順に作る」ときに使います。カレンダーの日付を1〜31まで生成する、といった処理が書けます。配列ならforEachやmapの方が今風です。", code:"// 1〜5を順に表示\nfor (let i = 1; i <= 5; i++) {\n  console.log(i);\n}\n// カレンダーのマスを作る例\nfor (let d = 1; d <= 31; d++) {\n  const cell = document.createElement('div');\n  cell.textContent = d;\n}" },
+      { term:"関数（function）は何のためにある？", mean:"処理のまとまりに名前を付けて、何度でも呼び出せるようにするもの。", use:"同じ処理をあちこちに書かず、1か所にまとめて使い回すために使います。「合計を計算する」「画面を更新する」といった処理を関数にしておくと、修正も1か所で済みます。", code:"// 税込価格を計算する関数\nfunction withTax(price) {\n  return price * 1.1;\n}\n// 何度でも呼べる\nconsole.log(withTax(100)); // 110\nconsole.log(withTax(500)); // 550" },
+      { term:"アロー関数 (a, b) => a + b の特徴は？", mean:"function を使わない短い関数の書き方。", use:"addEventListener や map に渡す「その場限りの処理」を短く書くのに最適。1行で値を返すだけなら return も {} も省けます。現代のJSではこの書き方が主流です。", code:"// 普通の関数\nfunction add1(a, b) { return a + b; }\n// アロー関数（同じ意味）\nconst add2 = (a, b) => a + b;\n// map に渡すと簡潔\nconst doubled = [1,2,3].map(n => n * 2);\nconsole.log(doubled); // [2,4,6]" },
+      { term:"return は何をする？", mean:"関数の処理結果を、呼び出した側に返す。", use:"関数で計算した値を「外で使える」ようにするのがreturn。returnが無い関数は undefined を返します。返した値は変数に入れたり、そのまま別の処理に渡せます。", code:"function double(n) {\n  return n * 2;   // 結果を返す\n}\nconst result = double(5); // 10 が入る\nconsole.log(result * 3);  // 30" },
+      { term:"=== と == の違いは？", mean:"=== は値と型の両方を比較、== は型を変換して比較（緩い）。", use:"実務では基本的に === を使います。== は '1' と 1 を等しいと判定するなど予期せぬ動きをするため、バグの元になるからです。「迷ったら === 」と覚えてOK。", code:"1 === 1;     // true\n1 === '1';   // false（型が違う）\n1 == '1';    // true（==は緩い・危険）\n// 実務では === を使う\nif (answer === 'yes') { ... }" },
+      { term:"配列とオブジェクトの違いは？", mean:"配列は順番で管理する並び、オブジェクトは名前(キー)で管理する組。", use:"複数のデータをまとめるとき、順番が大事なら配列 []、名前で取り出したいならオブジェクト {} を使います。実際はこの2つを組み合わせた「オブジェクトの配列」が最頻出です。", code:"// 配列：番号で取り出す\nconst colors = ['赤', '青'];\ncolors[0]; // '赤'\n// オブジェクト：名前で取り出す\nconst user = { name: '山田', age: 25 };\nuser.name; // '山田'\n// 組み合わせ（最頻出）\nconst users = [{name:'A'}, {name:'B'}];" },
+      { term:"テンプレート + map + join で何ができる？", mean:"データの配列を、画面に表示するHTMLの文字列に変換できる。", use:"「データ一覧を画面に並べる」最重要パターン。配列をmapでHTML断片に変え、joinで1つの文字列にまとめ、innerHTMLで画面に入れます。Reactを学ぶ前の土台になる考え方です。", code:"const fruits = ['りんご', 'みかん', 'ぶどう'];\nconst html = fruits\n  .map(f => `<li>${f}</li>`)\n  .join('');\ndocument.querySelector('#list').innerHTML = html;\n// 画面に3つの<li>が並ぶ" },
+      { term:"localStorage は何をする？", mean:"データをブラウザに保存する。ページを閉じても残る。", use:"「設定や記録を覚えておく」ために使います。このアプリの連続日数の保存もこれです。保存は setItem、読み出しは getItem。文字列しか入らないので、配列やオブジェクトは JSON にして保存します。", code:"// 保存（オブジェクトは文字列化）\nconst data = { days: 5 };\nlocalStorage.setItem('app', JSON.stringify(data));\n// 読み出し（文字列を元に戻す）\nconst saved = JSON.parse(\n  localStorage.getItem('app')\n);\nconsole.log(saved.days); // 5" },
+      { term:"JSON.stringify と JSON.parse の役割は？", mean:"stringify はデータを文字列に、parse は文字列をデータに戻す。", use:"保存や通信ではデータを「文字列」にする必要があります。配列やオブジェクトを保存・送信するときに stringify、受け取って使うときに parse、とペアで使います。", code:"const obj = { name: '山田', scores: [80, 90] };\n// 文字列にして保存\nconst text = JSON.stringify(obj);\nlocalStorage.setItem('user', text);\n// 取り出して元に戻す\nconst back = JSON.parse(\n  localStorage.getItem('user')\n);\nconsole.log(back.scores[1]); // 90" },
+      { term:"async / await は何のため？", mean:"通信など「時間のかかる処理」の完了を待ってから次に進むための書き方。", use:"サーバーからデータを取る（fetch）ときに必須。await を付けると「結果が返るまで待つ」という意味になり、上から順に読める自然なコードになります。関数には async を付けます。", code:"async function loadUser() {\n  // 結果が返るまで待つ\n  const res = await fetch('/api/user');\n  const user = await res.json();\n  document.querySelector('#name')\n    .textContent = user.name;\n}\nloadUser();" },
+      { term:"try / catch は何のため？", mean:"失敗するかもしれない処理を囲み、エラー時の対応を書く。", use:"通信失敗やデータ不正など「うまくいかないかもしれない処理」を安全に扱うために使います。エラーが起きてもアプリ全体が止まらず、catch の中で「失敗しました」と表示できます。", code:"try {\n  const data = JSON.parse(input);\n  console.log(data);\n} catch (e) {\n  // 不正な文字列でも落ちない\n  console.log('読み込み失敗:', e.message);\n  alert('データが正しくありません');\n}" },
+      { term:"console.log() はいつ使う？", mean:"値の中身を確認するために出力する。デバッグの基本道具。", use:"「ここまで処理が来ているか」「変数に何が入っているか」を確認するのに使います。思い通り動かないとき、怪しい場所に console.log を置いて中身を見るのが、原因特定の第一歩です。", code:"const items = [1, 2, 3];\nconsole.log('itemsの中身:', items);\nconst total = items.reduce((a, b) => a + b, 0);\nconsole.log('合計:', total); // 合計: 6" },
+      { term:"createElement と appendChild は何をする？", mean:"createElement で新しい要素を作り、appendChild で画面に追加する。", use:"JavaScriptから画面に要素を増やすときの基本。リストに項目を1つ足す、カードを動的に並べる、といった処理で使います。innerHTMLでまとめて入れる方法と使い分けます。", code:"const list = document.querySelector('#list');\nconst li = document.createElement('li');\nli.textContent = '新しい項目';\nlist.appendChild(li); // 画面のリストに追加される" },
+      { term:"値が undefined とはどういう状態？", mean:"変数や値が「まだ何も入っていない・存在しない」状態。", use:"find で見つからなかったとき、オブジェクトに無いキーを読んだときなどに現れます。undefined のまま使うとエラーになりやすいので、「あるかどうか」を確認してから使うのが安全です。", code:"const user = { name: '山田' };\nconsole.log(user.age); // undefined（ageは無い）\n// 確認してから使う\nif (user.age) {\n  console.log(user.age);\n} else {\n  console.log('年齢は未登録');\n}" },
+      { term:"length は何を返す？", mean:"配列の要素数、または文字列の文字数を返す。", use:"「何個あるか」「何文字か」を知るのに使います。ループの回数指定、入力文字数のチェック（パスワードは8文字以上か等）でよく登場します。", code:"const items = ['a', 'b', 'c'];\nconsole.log(items.length); // 3\nconst password = 'abc123';\nif (password.length < 8) {\n  alert('8文字以上にしてください');\n}" },
+      { term:"push() は何をする？", mean:"配列の末尾に新しい要素を追加する。", use:"「リストに1件足す」ときの定番。入力された内容を配列に貯めていく、といったTODOアプリ的な処理で必ず使います。元の配列が変化する点に注意。", code:"const todos = [];\ntodos.push('牛乳を買う');\ntodos.push('掃除する');\nconsole.log(todos);\n// ['牛乳を買う', '掃除する']\nconsole.log(todos.length); // 2" },
+      { term:"|| と && はどう使う？", mean:"|| はどちらか true で成立、&& は両方 true で成立。", use:"条件をまとめるときに使います。|| は「初期値の指定」（値が無ければこっち）、&& は「条件が揃ったときだけ実行」にも応用されます。", code:"// 両方の条件を満たすか\nif (age >= 18 && hasTicket) {\n  console.log('入場OK');\n}\n// 値が無ければ初期値（||の応用）\nconst name = input || 'ゲスト';\nconsole.log(name);" },
+      { term:"イベントの e.target は何を指す？", mean:"実際に操作（クリック等）された要素そのもの。", use:"どのボタンが押されたかを知りたいときに使います。たくさんのボタンに1つのリスナーをまとめて付け、押された要素を e.target で見分ける、という効率的な書き方ができます。", code:"list.addEventListener('click', (e) => {\n  // 押された要素を取得\n  console.log(e.target.textContent);\n  if (e.target.classList.contains('delete')) {\n    e.target.closest('li').remove();\n  }\n});" }
+    ]
+  };
+
+  let fcCategory = "HTML";
+  let fcIndex = 0;
+
+  function buildFcCats() {
+    const c = $("fc-cats"); c.innerHTML = "";
+    Object.keys(flashcards).forEach((cat) => {
+      const b = document.createElement("button");
+      b.className = "fc-cat" + (cat === fcCategory ? " active" : "");
+      b.textContent = cat;
+      b.addEventListener("click", () => { fcCategory = cat; fcIndex = 0; buildFcCats(); showCard(); });
+      c.appendChild(b);
+    });
+  }
+  function fitCardHeight() {
+    const inner = $("fc-inner");
+    const front = document.querySelector(".fc-front");
+    const back = document.querySelector(".fc-back");
+    const isFlipped = inner.classList.contains("flipped");
+    // 表示中の面の実際の高さに合わせる（最低200px）
+    const target = isFlipped ? back : front;
+    const h = Math.max(target.scrollHeight, 200);
+    $("flashcard").style.height = h + "px";
+  }
+  function showCard() {
+    const list = flashcards[fcCategory];
+    const card = list[fcIndex];
+    $("fc-inner").classList.remove("flipped");
+    $("fc-counter").textContent = (fcIndex+1) + " / " + list.length + "（" + fcCategory + "）";
+    $("fc-term").innerHTML = card.term;
+    $("fc-mean").textContent = card.mean;
+    $("fc-use").textContent = card.use;
+    $("fc-code").innerHTML = card.code;
+    fitCardHeight();
+  }
+  $("flashcard").addEventListener("click", () => {
+    $("fc-inner").classList.toggle("flipped");
+    fitCardHeight();
+  });
+  $("fc-prev").addEventListener("click", () => {
+    const list = flashcards[fcCategory];
+    fcIndex = (fcIndex - 1 + list.length) % list.length; showCard();
+  });
+  $("fc-next").addEventListener("click", () => {
+    const list = flashcards[fcCategory];
+    fcIndex = (fcIndex + 1) % list.length; showCard();
+  });
+  window.addEventListener("resize", fitCardHeight);
+  buildFcCats();
+  showCard();
+
   /* ===== タブ切り替え ===== */
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -551,6 +743,7 @@ btn.addEventListener('click', () =&gt; {
       document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
       tab.classList.add("active"); $("screen-"+tab.dataset.screen).classList.add("active");
       if (tab.dataset.screen === "learn") { $("learn-article").style.display = "none"; $("learn-list").style.display = "block"; }
+      if (tab.dataset.screen === "cards") { fitCardHeight(); }
       if (tab.dataset.screen === "record" || tab.dataset.screen === "my") refreshStats();
     });
   });
@@ -559,8 +752,8 @@ btn.addEventListener('click', () =&gt; {
     if (confirm("記録をすべてリセットしますか？")) { localStorage.removeItem("dailyAppData"); data = markToday(); refreshStats(); alert("リセットしました"); }
   });
 
-  showProblem(0);
   refreshStats();
 </script>
 </body>
 </html>
+
