@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>毎日のお題アプリ</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --border: #e3e3df; --text: #1a1a18; --sub: #6b6b66;
+    --accent: #185fa5; --accent-bg: #e6f1fb; --ok: #27500a; --ok-bg: #eaf3de;
+    --warn: #854f0b; --warn-bg: #faeeda; --err: #a32d2d; --err-bg: #fceceb;
+    --code-bg: #1e1e2e; --code-fg: #cdd6f4;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .app { max-width: 440px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; background: var(--bg); }
+  .screen { flex: 1; padding: 16px 16px 90px; display: none; }
+  .screen.active { display: block; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+  .screen-title { font-size: 20px; font-weight: 600; margin: 6px 4px 14px; }
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .header h2 { font-size: 16px; margin: 0; font-weight: 600; }
+  .streak { background: var(--warn-bg); color: var(--warn); font-size: 13px; padding: 5px 12px; border-radius: 999px; }
+  .body { padding: 18px; }
+  .progress { font-size: 12px; color: var(--sub); margin-bottom: 10px; }
+  .tags { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .tag { background: var(--accent-bg); color: var(--accent); font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+  .cat { font-size: 13px; color: var(--sub); }
+  .question { font-size: 15px; margin: 0 0 16px; }
+  .question code, .body code { background: var(--bg); padding: 2px 6px; border-radius: 5px; font-size: 14px; }
+  .label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+  textarea { width: 100%; min-height: 130px; border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 14px; line-height: 1.6; resize: vertical; background: var(--bg); color: var(--text); }
+  textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .buttons { display: flex; gap: 10px; margin-top: 14px; }
+  button { flex: 1; padding: 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; font-family: inherit; }
+  button:active { transform: scale(0.98); }
+  button.primary { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-bg); }
+  button.next { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-bg); margin-top: 12px; width: 100%; display: none; }
+  button.next.show { display: block; }
+  .result { margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 14px; display: none; }
+  .result.ok { background: var(--ok-bg); color: var(--ok); display: block; }
+  .result.ng { background: var(--warn-bg); color: var(--warn); display: block; }
+  .result.err { background: var(--err-bg); color: var(--err); display: block; }
+  .hint { margin-top: 12px; font-size: 13px; color: var(--sub); background: var(--bg); padding: 10px 14px; border-radius: 10px; display: none; }
+  .hint.show { display: block; }
+  .stats { display: flex; gap: 12px; padding: 16px; }
+  .stat { flex: 1; background: var(--bg); border-radius: 10px; padding: 14px; text-align: center; }
+  .stat .num { font-size: 26px; font-weight: 600; }
+  .stat .num.warn { color: var(--warn); }
+  .stat .lbl { font-size: 12px; color: var(--sub); }
+  .cal-wrap { padding: 0 16px 16px; }
+  .cal-label { font-size: 13px; color: var(--sub); margin-bottom: 8px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal .day { aspect-ratio: 1; border-radius: 4px; background: var(--bg); }
+  .cal .day.done { background: var(--ok-bg); }
+  .cal .day.today { background: var(--warn-bg); outline: 2px solid var(--warn); outline-offset: -2px; }
+  .learn-group { font-size: 13px; color: var(--sub); margin: 4px 4px 8px; }
+  .learn-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); cursor: pointer; text-decoration: none; color: inherit; }
+  .learn-item:last-child { border-bottom: none; }
+  .learn-item:active { background: var(--bg); }
+  .learn-item h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .learn-item p { margin: 0; font-size: 13px; color: var(--sub); }
+  .learn-item .arrow { color: var(--accent); font-size: 18px; flex-shrink: 0; }
+  /* 記事ビュー */
+  .article-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .back { background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; padding: 4px 8px; flex: none; width: auto; }
+  .article-head h2 { font-size: 16px; margin: 0; font-weight: 600; }
+  .article { padding: 4px 18px 18px; }
+  .article h3 { font-size: 15px; font-weight: 600; margin: 20px 0 6px; }
+  .article h3:first-child { margin-top: 12px; }
+  .article p { font-size: 14px; margin: 0 0 8px; }
+  .article ul { font-size: 14px; margin: 0 0 8px; padding-left: 20px; }
+  .article li { margin-bottom: 4px; }
+  .article code { background: var(--bg); padding: 2px 6px; border-radius: 5px; font-size: 13px; font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .article pre { background: var(--code-bg); color: var(--code-fg); padding: 12px 14px; border-radius: 8px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; margin: 0 0 12px; }
+  .article .note { background: var(--accent-bg); color: var(--accent); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin: 0 0 12px; }
+  .my-row { display: flex; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .my-row:last-child { border-bottom: none; }
+  .my-row .v { color: var(--sub); }
+  .reset { color: var(--err); cursor: pointer; }
+  .soon { padding: 30px 18px; text-align: center; color: var(--sub); font-size: 14px; }
+  .tabbar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 440px; margin: 0 auto; display: flex; background: var(--card); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom, 0); }
+  .tab { flex: 1; border: none; background: none; padding: 9px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--sub); cursor: pointer; font-family: inherit; }
+  .tab svg { width: 23px; height: 23px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tab span { font-size: 10px; }
+  .tab.active { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <section class="screen active" id="screen-quest">
+    <div class="card">
+      <div class="header">
+        <h2>今日のお題</h2>
+        <span class="streak" id="streak">1日目</span>
+      </div>
+      <div class="body">
+        <div class="progress" id="progress"></div>
+        <div class="tags">
+          <span class="tag" id="level">初級</span>
+          <span class="cat" id="category">配列・繰り返し</span>
+        </div>
+        <p class="question" id="question"></p>
+        <div class="label">あなたのコード（JavaScript）</div>
+        <textarea id="code" spellcheck="false"></textarea>
+        <div class="buttons">
+          <button class="primary" id="runBtn">実行する</button>
+          <button id="hintBtn">ヒントを見る</button>
+        </div>
+        <div class="hint" id="hint"></div>
+        <div class="result" id="result"></div>
+        <button class="next" id="nextBtn">次のお題へ</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-learn">
+    <!-- 一覧 -->
+    <div id="learn-list">
+      <div class="screen-title">学習</div>
+      <div class="learn-group">HTML の基礎</div>
+      <div class="card" id="html-list"></div>
+      <div class="learn-group">CSS の基礎</div>
+      <div class="card" id="css-list"></div>
+      <div class="learn-group">JavaScript の基礎</div>
+      <div class="card" id="js-list"></div>
+      <div class="learn-group">発展トピック</div>
+      <div class="card" id="adv-list"></div>
+      <div class="learn-group">外部リンク（もっと深く）</div>
+      <div class="card" id="link-list">
+        <a class="learn-item" href="https://saruwakakun.com/html-css/basic/html" target="_blank" rel="noopener">
+          <div><h3>HTML入門（サルワカ）</h3><p>タグの使い方を図解でやさしく</p></div><span class="arrow">↗</span>
+        </a>
+        <a class="learn-item" href="https://saruwakakun.com/html-css/basic/css" target="_blank" rel="noopener">
+          <div><h3>CSS入門（サルワカ）</h3><p>書き方・セレクタ・色や線の基本</p></div><span class="arrow">↗</span>
+        </a>
+        <a class="learn-item" href="https://lvgs-pd.github.io/frontend-training-reference/javascript/" target="_blank" rel="noopener">
+          <div><h3>JavaScriptリファレンス</h3><p>ライブプレビュー付きで動作を確認</p></div><span class="arrow">↗</span>
+        </a>
+        <a class="learn-item" href="https://lvgs-pd.github.io/frontend-training-reference/" target="_blank" rel="noopener">
+          <div><h3>フロントエンド基礎リファレンス</h3><p>HTML/CSS/レイアウト/レスポンシブの一覧</p></div><span class="arrow">↗</span>
+        </a>
+        <a class="learn-item" href="https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference" target="_blank" rel="noopener">
+          <div><h3>MDN（公式リファレンス）</h3><p>困ったとき調べる、エンジニア定番の辞書</p></div><span class="arrow">↗</span>
+        </a>
+      </div>
+      <p class="soon">アプリ内の記事は項目を選ぶと開きます。外部リンクは新しいタブで開きます</p>
+    </div>
+    <!-- 記事 -->
+    <div id="learn-article" style="display:none;">
+      <div class="card">
+        <div class="article-head">
+          <button class="back" id="backBtn">‹ 戻る</button>
+          <h2 id="article-title"></h2>
+        </div>
+        <div class="article" id="article-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-record">
+    <div class="screen-title">記録</div>
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="num warn" id="streakNum">1</div><div class="lbl">連続日数</div></div>
+        <div class="stat"><div class="num" id="totalNum">1</div><div class="lbl">合計日数</div></div>
+      </div>
+      <div class="cal-wrap">
+        <div class="cal-label">今月の学習カレンダー</div>
+        <div class="cal" id="calendar"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-cards">
+    <div class="screen-title">単語</div>
+    <div class="card"><p class="soon">フラッシュカード機能は今後追加予定です</p></div>
+  </section>
+
+  <section class="screen" id="screen-my">
+    <div class="screen-title">マイページ</div>
+    <div class="card">
+      <div class="my-row"><span>連続日数</span><span class="v" id="myStreak">1日</span></div>
+      <div class="my-row"><span>合計学習日数</span><span class="v" id="myTotal">1日</span></div>
+      <div class="my-row"><span>解いたお題</span><span class="v" id="mySolved">0問</span></div>
+      <div class="my-row"><span>記録をリセット</span><span class="reset" id="resetBtn">リセット</span></div>
+    </div>
+    <p class="soon">記録はこのブラウザに保存されています</p>
+  </section>
+
+  <nav class="tabbar">
+    <button class="tab active" data-screen="quest">
+      <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.7-1 1.4-1 2.5H9c0-1.1-.3-1.8-1-2.5A6 6 0 0 1 12 3z"/></svg>
+      <span>お題</span>
+    </button>
+    <button class="tab" data-screen="learn">
+      <svg viewBox="0 0 24 24"><path d="M4 5h7a2 2 0 0 1 2 2v12a1.5 1.5 0 0 0-1.5-1.5H4zM20 5h-7a2 2 0 0 0-2 2v12a1.5 1.5 0 0 1 1.5-1.5H20z"/></svg>
+      <span>学習</span>
+    </button>
+    <button class="tab" data-screen="record">
+      <svg viewBox="0 0 24 24"><path d="M12 2c1 3-1 4-1 6a3 3 0 0 0 6 0c0-1 0-2-.5-3 2 1.5 3.5 4 3.5 7a8 8 0 0 1-16 0c0-3.5 2.5-6 5-8 .5 1 1 1.5 3-2z"/></svg>
+      <span>記録</span>
+    </button>
+    <button class="tab" data-screen="cards">
+      <svg viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="M7 4h14v12"/></svg>
+      <span>単語</span>
+    </button>
+    <button class="tab" data-screen="my">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      <span>マイ</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  /* ===== お題データ ===== */
+  const problems = [
+    { level:"初級", category:"配列・繰り返し", question:"配列 [1,2,3,4,5,6] から偶数だけを取り出して、result という変数に入れてください。",
+      starterCode:"const nums = [1, 2, 3, 4, 5, 6];\nconst result = nums.filter(n => n % 2 === 0);\n", expected:[2,4,6],
+      hint:"filter を使うと「条件に合うものだけ」を取り出せます。偶数は n % 2 === 0 で判定できます。" },
+    { level:"初級", category:"計算", question:"1 から 10 までの整数をすべて足した合計を、result に入れてください。",
+      starterCode:"let result = 0;\nfor (let i = 1; i <= 10; i++) {\n  result += i;\n}\n", expected:55,
+      hint:"for ループで i を 1 から 10 まで動かし、result にどんどん足していきます。" },
+    { level:"初級", category:"配列・変換", question:"配列 [1,2,3] の各要素を2倍にした新しい配列を、result に入れてください。",
+      starterCode:"const nums = [1, 2, 3];\nconst result = nums.map(n => n * 2);\n", expected:[2,4,6],
+      hint:"map を使うと「各要素を変換した新しい配列」が作れます。" },
+    { level:"初級", category:"文字列", question:'文字列 "hello" を大文字にして、result に入れてください。',
+      starterCode:'const text = "hello";\nconst result = text.toUpperCase();\n', expected:"HELLO",
+      hint:"文字列には toUpperCase() という、大文字に変換するメソッドがあります。" },
+    { level:"中級", category:"配列・集計", question:"配列 [4,8,15,16,23,42] の中で最大の数を、result に入れてください。",
+      starterCode:"const nums = [4, 8, 15, 16, 23, 42];\nconst result = Math.max(...nums);\n", expected:42,
+      hint:"Math.max(...nums) のように ... を付けると、配列の中身を比較できます。" }
+  ];
+
+  /* ===== 学習記事データ（説明は自分の言葉で。ここに足せば項目を増やせる） ===== */
+  const lessons = {
+    html: [
+      { id:"html-what", title:"HTMLとは", desc:"ページの骨組みを作る言語",
+        body:`<p>HTMLは、Webページの「骨組み」を作る言語です。見出し・段落・画像・リンクといった「何がそこにあるか」を決めます。</p>
+<p>家づくりに例えると、HTMLは柱や壁の構造、CSSは内装やペンキ、JavaScriptは自動ドアやスイッチのような動き、というイメージです。</p>
+<p class="note">HTMLだけでも表示はできますが、見た目は素っ気ない状態です。そこにCSSとJavaScriptを足して仕上げていきます。</p>` },
+      { id:"html-tag", title:"タグの書き方", desc:"開始タグと終了タグ",
+        body:`<p>HTMLは「タグ」で要素を囲って書きます。多くは開始タグと終了タグのペアです。</p>
+<pre>&lt;p&gt;これは段落です。&lt;/p&gt;</pre>
+<ul><li><code>&lt;p&gt;</code> … 開始タグ（ここから）</li><li><code>&lt;/p&gt;</code> … 終了タグ（ここまで）。スラッシュが付きます</li></ul>
+<h3>よく使うタグ</h3>
+<ul>
+<li><code>&lt;h1&gt;</code>〜<code>&lt;h6&gt;</code> … 見出し（数字が小さいほど大きい）</li>
+<li><code>&lt;p&gt;</code> … 段落</li>
+<li><code>&lt;a&gt;</code> … リンク</li>
+<li><code>&lt;img&gt;</code> … 画像</li>
+<li><code>&lt;div&gt;</code> … ひとまとまりの箱</li>
+</ul>
+<p class="note">よくある間違い：終了タグの <code>/</code> を忘れること。ペアを意識すると崩れにくくなります。</p>` },
+      { id:"html-attr", title:"属性とid・class", desc:"タグに情報を足す",
+        body:`<p>タグには「属性」で追加情報を持たせられます。中でも <code>id</code> と <code>class</code> は、CSSやJavaScriptから「どの要素か」を指すのに使う重要な属性です。</p>
+<pre>&lt;a href="https://example.com"&gt;リンク&lt;/a&gt;
+&lt;div id="header"&gt;ヘッダー&lt;/div&gt;
+&lt;p class="note"&gt;注意書き&lt;/p&gt;</pre>
+<ul>
+<li><code>href</code> … リンク先（aタグの属性）</li>
+<li><code>id</code> … その要素だけの名札。ページ内で1回だけ</li>
+<li><code>class</code> … グループの名札。何度でも使える</li>
+</ul>
+<p class="note">id と class は、後でCSSやJavaScriptが要素を見つける「目印」になります。ここがHTMLとCSS/JSをつなぐ橋です。</p>` }
+    ],
+    css: [
+      { id:"css-basic", title:"CSSの書き方", desc:"セレクタ・プロパティ・値の基本",
+        body:`<p>CSSは「どこの・何を・どう変えるか」を指定して、ページの見た目を整える言語です。基本の形はこうです。</p>
+<pre>セレクタ {
+  プロパティ: 値;
+}</pre>
+<p>たとえば「pタグの文字色をオレンジに」したいなら、こう書きます。</p>
+<pre>p {
+  color: orange;
+}</pre>
+<ul><li><code>セレクタ</code> … どこを変えるか（pタグなど）</li><li><code>プロパティ</code> … 何を変えるか（color＝文字色）</li><li><code>値</code> … どう変えるか（orange）</li></ul>
+<p class="note">プロパティと値はコロン「:」でつなぎ、行末はセミコロン「;」で区切ります。セミコロンの付け忘れは初学者によくある詰まりどころです。</p>` },
+      { id:"css-selector", title:"セレクタの種類", desc:"タグ・id・classで指定する",
+        body:`<p>「どこを変えるか」を指定するのがセレクタです。よく使う3つを覚えれば十分です。</p>
+<h3>タグ名で指定</h3>
+<pre>p { color: orange; }</pre>
+<p>すべてのpタグが対象になります。</p>
+<h3>id名で指定（#をつける）</h3>
+<pre>#headline { color: orange; }</pre>
+<p><code>id="headline"</code> の要素が対象。idはページ内で1回だけ使えます。</p>
+<h3>class名で指定（.をつける）</h3>
+<pre>.main { color: orange; }</pre>
+<p><code>class="main"</code> の要素が対象。classは何度でも使えます。</p>
+<p class="note">複数まとめて指定したいときは <code>h1, h2 { ... }</code> のようにカンマで区切ります。</p>` },
+      { id:"css-prop", title:"よく使うプロパティ", desc:"色・大きさ・線",
+        body:`<p>見た目を変える代表的なプロパティです。</p>
+<h3>文字の色</h3>
+<pre>color: blue;          /* 色名 */
+color: #f89174;       /* カラーコード */</pre>
+<h3>文字の大きさ</h3>
+<pre>font-size: 18px;</pre>
+<h3>背景色</h3>
+<pre>background-color: #fffbf4;</pre>
+<h3>線を引く</h3>
+<pre>border: solid 2px gray;</pre>
+<p>「種類・太さ・色」を空けて並べます。種類には solid（実線）・dotted（点線）・dashed（破線）などがあります。</p>
+<h3>文字寄せ</h3>
+<pre>text-align: center;   /* 中央寄せ */</pre>` },
+      { id:"css-box", title:"余白（margin と padding）", desc:"要素のすきまの作り方",
+        body:`<p>要素まわりの「すきま」を作るのが余白です。2種類あり、混同しやすいので図のイメージで覚えます。</p>
+<ul>
+<li><code>padding</code> … 要素の<strong>内側</strong>の余白（箱と中身のすきま）</li>
+<li><code>margin</code> … 要素の<strong>外側</strong>の余白（箱と箱のすきま）</li>
+</ul>
+<pre>.box {
+  padding: 16px;   /* 内側に余白 */
+  margin: 24px;    /* 外側に余白 */
+}</pre>
+<p>上下左右を個別に指定もできます。</p>
+<pre>margin-top: 10px;
+padding-left: 20px;</pre>
+<p class="note">「中身との間隔は padding、隣との間隔は margin」と覚えると迷いません。</p>` },
+      { id:"css-display", title:"表示の種類（display）", desc:"要素の並び方を決める",
+        body:`<p><code>display</code> は、要素がどう並ぶかを決めるプロパティです。レイアウトの土台になります。</p>
+<ul>
+<li><code>block</code> … 縦に積み上がる（divやpの初期値）。横幅いっぱいに広がる</li>
+<li><code>inline</code> … 文章の中で横に並ぶ（aやspanの初期値）</li>
+<li><code>none</code> … 非表示にする</li>
+<li><code>flex</code> … 子要素を柔軟に横並びにできる（現場でよく使う）</li>
+</ul>
+<pre>.menu {
+  display: flex;   /* 子要素が横に並ぶ */
+  gap: 12px;       /* すきまを空ける */
+}</pre>
+<p class="note">「横並びにしたい」と思ったら、まず flex を思い出すと近道です。</p>` },
+      { id:"css-where", title:"CSSはどこに書く", desc:"styleタグと外部ファイル",
+        body:`<p>CSSの置き場所は主に3通り。学習中はまず1つ目で十分です。</p>
+<h3>1. styleタグの中（最初はこれ）</h3>
+<pre>&lt;style&gt;
+  body { color: gray; }
+&lt;/style&gt;</pre>
+<p>HTMLの &lt;head&gt; の中に書きます。手軽で、1ファイルで完結します。</p>
+<h3>2. 外部CSSファイル（実務はこれ）</h3>
+<pre>&lt;link rel="stylesheet" href="style.css"&gt;</pre>
+<p>CSSを別ファイルに分け、HTMLから読み込みます。複数ページで共通の見た目を使い回せます。</p>
+<h3>3. タグに直接（最終手段）</h3>
+<pre>&lt;p style="color: red;"&gt;赤い文字&lt;/p&gt;</pre>
+<p class="note">実務では「2. 外部ファイル」が基本。HTML（構造）とCSS（見た目）を分けておくと管理しやすいからです。</p>` }
+    ],
+    js: [
+      { id:"js-intro", title:"JavaScriptとは", desc:"ページに動きを与える言語",
+        body:`<p>JavaScriptは、Webページに「動き」を与えるプログラミング言語です。役割分担で整理すると分かりやすいです。</p>
+<ul><li><code>HTML</code> … 骨格（何があるか）</li><li><code>CSS</code> … 見た目（どう見えるか）</li><li><code>JavaScript</code> … 振る舞い（操作にどう反応するか）</li></ul>
+<p>ボタンを押したら表示が変わる、入力をチェックする、といったユーザー操作への反応を担当します。</p>
+<p class="note">HTML/CSSが「状態」、JavaScriptが「変化」を扱う、と覚えると整理しやすいです。</p>` },
+      { id:"js-var", title:"変数", desc:"const と let の使い分け",
+        body:`<p>変数は、データに名前をつけて保存する仕組みです。なぜ必要かというと、同じ値を何度も使ったり、後から計算したりするとき、名前で呼べると便利だからです。</p>
+<h3>const（再代入できない）</h3>
+<pre>const name = "山田太郎";</pre>
+<p>後から変えない値はこれ。基本はまずconstを使います。</p>
+<h3>let（再代入できる）</h3>
+<pre>let age = 25;
+age = 26;   // 変更できる</pre>
+<p>値を後から変える必要があるときだけletを使います。</p>
+<p class="note">現場のルール：迷ったら const、変える必要があるときだけ let。古い var は使いません。よくある間違いは const に再代入してエラーになることです。</p>` },
+      { id:"js-type", title:"データの型", desc:"文字列・数値・配列など",
+        body:`<p>JavaScriptが扱う値には種類（型）があります。代表的なものはこちらです。</p>
+<ul>
+<li><code>String</code> … 文字列　例: <code>"こんにちは"</code></li>
+<li><code>Number</code> … 数値　例: <code>42</code>, <code>3.14</code></li>
+<li><code>Boolean</code> … 真偽値　例: <code>true</code>, <code>false</code></li>
+<li><code>Array</code> … 配列（複数の値）　例: <code>["HTML","CSS","JS"]</code></li>
+<li><code>Object</code> … キーと値の組　例: <code>{ name:"山田", age:25 }</code></li>
+</ul>
+<pre>const skills = ["HTML", "CSS", "JS"];
+console.log(skills[0]);  // "HTML"（番号は0から数える）</pre>
+<p class="note">配列の番号（インデックス）は0から始まります。最初の要素が[0]、というのは最初つまずきやすい点です。</p>` },
+      { id:"js-func", title:"関数と条件分岐", desc:"処理のまとまりと場合分け",
+        body:`<p>関数は「処理のまとまり」、条件分岐は「場合によって処理を変える」仕組みです。</p>
+<h3>関数</h3>
+<pre>function greet(name) {
+  return "こんにちは、" + name + "さん！";
+}
+greet("研修生");  // → こんにちは、研修生さん！</pre>
+<h3>アロー関数（短い書き方）</h3>
+<pre>const add = (a, b) => a + b;
+add(3, 5);  // → 8</pre>
+<h3>条件分岐（if）</h3>
+<pre>if (isOpen) {
+  // 開いているときの処理
+} else {
+  // 閉じているときの処理
+}</pre>
+<p class="note">比較で「等しい」を調べるときは <code>===</code> （イコール3つ）を使うのが基本です。</p>` },
+      { id:"js-array", title:"配列メソッド", desc:"map / filter / find",
+        body:`<p>配列を扱う便利な道具です。お題タブでもよく登場します。Reactでも多用するので、ここは丁寧に。</p>
+<h3>filter（条件に合うものだけ残す）</h3>
+<pre>const nums = [1, 2, 3, 4, 5, 6];
+const even = nums.filter(n =&gt; n % 2 === 0);
+// → [2, 4, 6]</pre>
+<h3>map（各要素を変換する）</h3>
+<pre>const doubled = nums.map(n =&gt; n * 2);
+// → [2, 4, 6, 8, 10, 12]</pre>
+<h3>find（最初の1つを見つける）</h3>
+<pre>const found = nums.find(n =&gt; n &gt; 3);
+// → 4</pre>
+<p class="note">filterは「絞り込み」、mapは「変換」、findは「1個探す」。この3つで配列操作の大半がこなせます。</p>` },
+      { id:"js-dom", title:"DOM操作", desc:"HTMLをJavaScriptから触る",
+        body:`<p>DOM操作とは、JavaScriptからHTMLの要素を取得して、中身や見た目を書き換えることです。</p>
+<h3>要素を取得する</h3>
+<pre>const title = document.querySelector('#title');</pre>
+<p><code>#title</code> はCSSと同じ書き方（idなら#、classなら.）。これでその要素を捕まえます。</p>
+<h3>中身を書き換える</h3>
+<pre>title.textContent = "新しいタイトル";</pre>
+<h3>見た目を変える</h3>
+<pre>title.style.color = "red";</pre>
+<p class="note">「まず querySelector で捕まえて、次に書き換える」という2段構えが基本の型です。</p>` },
+      { id:"js-event", title:"イベント", desc:"クリックなどに反応する",
+        body:`<p>イベントは、ユーザーの操作（クリック・入力など）に反応して処理を動かす仕組みです。</p>
+<pre>const btn = document.querySelector('#btn');
+btn.addEventListener('click', () =&gt; {
+  alert("押されました！");
+});</pre>
+<p><code>addEventListener('click', ...)</code> で「クリックされたら、この処理をして」と登録します。</p>
+<h3>よく使うイベント</h3>
+<ul>
+<li><code>click</code> … クリックしたとき</li>
+<li><code>input</code> … 入力欄に文字を打ったとき</li>
+<li><code>change</code> … 値が確定したとき</li>
+</ul>
+<p class="note">DOM操作（要素を捕まえる）とイベント（操作に反応する）を組み合わせると、動くアプリになります。</p>` }
+    ],
+    adv: [
+      { id:"adv-react", title:"React の考え方", desc:"画面を部品に分ける",
+        body:`<p>Reactは、画面を「部品（コンポーネント）」に分けて組み立てるための道具です。</p>
+<p>たとえばこのアプリなら、「お題カード」「ボトムバー」「記録カレンダー」をそれぞれ部品として作り、組み合わせて1画面にします。レゴブロックのイメージです。</p>
+<h3>なぜ便利か</h3>
+<ul>
+<li>同じ部品を使い回せる（ボタンを1回作れば何度でも使える）</li>
+<li>データが変わると、画面が自動で更新される（手で書き換えなくてよい）</li>
+</ul>
+<p>この「データが変わると画面が自動で変わる」感覚が、素のJavaScript（自分でDOMを書き換える）との一番の違いです。</p>
+<p class="note">PMとして大事なのは、細かい書き方より「Reactは部品の組み立て」「データと画面が連動する」という考え方を掴むこと。これが分かると設計の会話が通じます。</p>` },
+      { id:"adv-vue", title:"Vue の考え方", desc:"Reactと似た部品の道具",
+        body:`<p>Vueも、Reactと同じく「画面を部品に分けて、データと画面を連動させる」ための道具です。目的はReactとよく似ています。</p>
+<h3>ReactとVueの違い（ざっくり）</h3>
+<ul>
+<li>考え方の核（部品・データ連動）はほぼ同じ</li>
+<li>書き方の流儀が違う。VueはHTMLに近い書き味で、学習が始めやすいと言われる</li>
+<li>世界的にはReactの利用が多いが、Vueも根強い人気</li>
+</ul>
+<p class="note">PM視点では「どちらもやりたいことは同じ。チームがどちらに慣れているかで選ぶ」と理解しておけば十分です。エンジニアに「なぜこっちを選んだの？」と聞ける程度の土台になります。</p>` },
+      { id:"adv-api", title:"API とは", desc:"外部とデータをやりとりする窓口",
+        body:`<p>APIは、ざっくり言うと「あらかじめ用意された機能の窓口」です。自分でゼロから作らなくても、その窓口を通じて機能やデータを呼び出せます。</p>
+<p>家電のリモコンに例えると、中の仕組みは知らなくても「ボタンを押せばチャンネルが変わる」。この「操作の窓口」がAPIです。</p>
+<h3>よくある使い方</h3>
+<p>「今日の東京の天気を教えて」と天気サービスのAPIに頼むと、データが返ってきて、それを画面に表示する——という流れです。</p>
+<pre>// イメージ（実際の通信は省略）
+天気API に「東京」をリクエスト
+  ↓
+{ 天気: "晴れ", 気温: 22 } が返る
+  ↓
+画面に表示する</pre>
+<p class="note">PMとして超重要：現場の会話の多くがこのAPI周りです。「このデータはどのAPIから来る？」「APIが遅い/落ちたらどう見せる？」を話せると、エンジニアとの連携がぐっと深まります。</p>` }
+    ]
+  };
+
+  /* ===== 記録の読み書き ===== */
+  function loadData() { try { const raw = localStorage.getItem("dailyAppData"); if (raw) return JSON.parse(raw); } catch (e) {} return { days: [], solved: 0 }; }
+  function saveData(d) { try { localStorage.setItem("dailyAppData", JSON.stringify(d)); } catch (e) {} }
+  function todayStr() { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+  function markToday() { const d = loadData(); const t = todayStr(); if (!d.days.includes(t)) d.days.push(t); saveData(d); return d; }
+  function calcStreak(days) {
+    if (days.length === 0) return 0;
+    const set = new Set(days); let streak = 0; let cur = new Date();
+    for (;;) { const key = cur.getFullYear()+"-"+(cur.getMonth()+1)+"-"+cur.getDate(); if (set.has(key)) { streak++; cur.setDate(cur.getDate()-1); } else break; }
+    return streak;
+  }
+  let data = markToday();
+  function refreshStats() {
+    data = loadData();
+    const streak = calcStreak(data.days); const total = data.days.length;
+    $("streak").textContent = streak + "日目"; $("streakNum").textContent = streak; $("totalNum").textContent = total;
+    $("myStreak").textContent = streak + "日"; $("myTotal").textContent = total + "日"; $("mySolved").textContent = (data.solved||0) + "問";
+    renderCalendar();
+  }
+  function renderCalendar() {
+    const cal = $("calendar"); cal.innerHTML = "";
+    const now = new Date(); const year = now.getFullYear(), month = now.getMonth();
+    const daysInMonth = new Date(year, month+1, 0).getDate(); const todayDate = now.getDate(); const doneSet = new Set(data.days);
+    for (let day=1; day<=daysInMonth; day++) {
+      const div = document.createElement("div"); div.className = "day";
+      const key = year+"-"+(month+1)+"-"+day;
+      if (doneSet.has(key)) div.classList.add("done"); if (day===todayDate) div.classList.add("today");
+      cal.appendChild(div);
+    }
+  }
+
+  /* ===== お題 ===== */
+  let currentIndex = 0;
+  function showProblem(index) {
+    const p = problems[index];
+    $("progress").textContent = (index+1) + "問目 / 全" + problems.length + "問";
+    $("level").textContent = p.level; $("category").textContent = p.category; $("question").textContent = p.question;
+    $("code").value = p.starterCode; $("result").className = "result"; $("hint").className = "hint"; $("nextBtn").classList.remove("show");
+  }
+  $("hintBtn").addEventListener("click", () => { const h = $("hint"); h.textContent = problems[currentIndex].hint; h.classList.toggle("show"); });
+  $("runBtn").addEventListener("click", () => {
+    const p = problems[currentIndex]; const result = $("result"); result.className = "result"; const userCode = $("code").value;
+    let v;
+    try { v = new Function(userCode + "\n; return typeof result !== 'undefined' ? result : undefined;")(); }
+    catch (e) { result.classList.add("err"); result.textContent = "エラーが出ています: " + e.message; return; }
+    if (v === undefined) { result.classList.add("ng"); result.textContent = "result という変数が見つかりません。result に答えを入れてみてください。"; return; }
+    if (JSON.stringify(v) === JSON.stringify(p.expected)) {
+      result.classList.add("ok"); result.textContent = "正解! 出力: " + JSON.stringify(v);
+      const d = loadData(); d.solved = (d.solved||0)+1; saveData(d); refreshStats(); $("nextBtn").classList.add("show");
+    } else { result.classList.add("ng"); result.textContent = "惜しい、もう一度。あなたの出力: " + JSON.stringify(v); }
+  });
+  $("nextBtn").addEventListener("click", () => { currentIndex = (currentIndex+1) % problems.length; showProblem(currentIndex); $("screen-quest").scrollIntoView({behavior:"smooth", block:"start"}); });
+
+  /* ===== 学習タブ：一覧と記事 ===== */
+  function buildLearnList(containerId, items) {
+    const c = $(containerId); c.innerHTML = "";
+    items.forEach((item) => {
+      const div = document.createElement("div"); div.className = "learn-item";
+      div.innerHTML = '<div><h3>'+item.title+'</h3><p>'+item.desc+'</p></div><span class="arrow">›</span>';
+      div.addEventListener("click", () => openArticle(item));
+      c.appendChild(div);
+    });
+  }
+  function openArticle(item) {
+    $("article-title").textContent = item.title;
+    $("article-body").innerHTML = item.body;
+    $("learn-list").style.display = "none";
+    $("learn-article").style.display = "block";
+    window.scrollTo(0, 0);
+  }
+  $("backBtn").addEventListener("click", () => {
+    $("learn-article").style.display = "none";
+    $("learn-list").style.display = "block";
+  });
+  buildLearnList("html-list", lessons.html);
+  buildLearnList("css-list", lessons.css);
+  buildLearnList("js-list", lessons.js);
+  buildLearnList("adv-list", lessons.adv);
+
+  /* ===== タブ切り替え ===== */
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+      document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+      tab.classList.add("active"); $("screen-"+tab.dataset.screen).classList.add("active");
+      if (tab.dataset.screen === "learn") { $("learn-article").style.display = "none"; $("learn-list").style.display = "block"; }
+      if (tab.dataset.screen === "record" || tab.dataset.screen === "my") refreshStats();
+    });
+  });
+
+  $("resetBtn").addEventListener("click", () => {
+    if (confirm("記録をすべてリセットしますか？")) { localStorage.removeItem("dailyAppData"); data = markToday(); refreshStats(); alert("リセットしました"); }
+  });
+
+  showProblem(0);
+  refreshStats();
+</script>
+</body>
+</html>
